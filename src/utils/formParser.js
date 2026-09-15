@@ -1,12 +1,14 @@
 /**
- * Client-side Google Form parser using public CORS proxy fallbacks.
- * Extracts FB_PUBLIC_LOAD_DATA_ directly in the browser!
+ * Multi-fallback Google Form parser.
+ * Combines local API backend, robust public CORS proxies, and client-side prefilled URL parsing.
  */
 
 const CORS_PROXIES = [
   (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
+  (url) => `https://yacdn.org/proxy/${url}`
 ];
 
 export function normalizeFormUrl(inputUrl) {
@@ -25,35 +27,55 @@ export function normalizeFormUrl(inputUrl) {
 export async function fetchAndParseGoogleForm(formUrl) {
   const normalizedUrl = normalizeFormUrl(formUrl);
 
-  // If the user pasted a prefilled link containing entry.XXXXXXXXX parameters directly:
-  const urlObj = parsePrefilledUrl(formUrl);
-  
-  let htmlText = null;
-  let lastErr = null;
+  // 1. Check if user pasted a prefilled link containing entry.XXXXXXXXX parameters directly:
+  const prefilledObj = parsePrefilledUrl(formUrl);
+  if (prefilledObj && prefilledObj.fields && prefilledObj.fields.length > 0) {
+    return prefilledObj;
+  }
 
-  // Try fetching page HTML through client-side proxies
+  // 2. Try Local / Express / Vercel API backend (/api/parse-form)
+  try {
+    const apiRes = await fetch('/api/parse-form', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: normalizedUrl })
+    });
+    if (apiRes.ok) {
+      const json = await apiRes.json();
+      if (json && json.success && json.data) {
+        return json.data;
+      }
+    }
+  } catch (e) {
+    // API backend not available or running in static host mode, continue to CORS proxies
+  }
+
+  // 3. Try fetching page HTML through client-side CORS proxies
+  let htmlText = null;
+
   for (const proxyFn of CORS_PROXIES) {
     try {
       const proxyUrl = proxyFn(normalizedUrl);
-      const res = await fetch(proxyUrl);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+      const res = await fetch(proxyUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         htmlText = await res.text();
-        if (htmlText && htmlText.includes('FB_PUBLIC_LOAD_DATA_')) {
+        if (htmlText && (htmlText.includes('FB_PUBLIC_LOAD_DATA_') || htmlText.includes('docs.google.com/forms'))) {
           break;
         }
       }
     } catch (e) {
-      lastErr = e;
+      // Proxy failed or timed out, try next
     }
   }
 
   if (!htmlText || !htmlText.includes('FB_PUBLIC_LOAD_DATA_')) {
-    // If HTML fetch failed or CORS proxy was blocked, check if we parsed entries from prefilled link
-    if (urlObj && urlObj.fields && urlObj.fields.length > 0) {
-      return urlObj;
-    }
     throw new Error(
-      'Could not fetch form HTML directly. If the form is private or proxy is unavailable, you can also paste a pre-filled Google Form link!'
+      'Could not fetch Google Form structure directly via public proxies. Please verify that the Google Form is public and accessible.'
     );
   }
 
@@ -71,7 +93,7 @@ function parseFormSchemaFromHtml(html, formUrl) {
   // Extract FB_PUBLIC_LOAD_DATA_
   const scriptMatch = html.match(/FB_PUBLIC_LOAD_DATA_\s*=\s*([\s\S]+?);\s*<\/script>|FB_PUBLIC_LOAD_DATA_\s*=\s*([\s\S]+?);/);
   if (!scriptMatch) {
-    throw new Error('Failed to extract FB_PUBLIC_LOAD_DATA_ script from page.');
+    throw new Error('Could not find Google Form structure payload in page. Make sure the form is public.');
   }
 
   const jsonStr = scriptMatch[1] || scriptMatch[2];
