@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, User, History, Zap, FormInput, Lock } from 'lucide-react';
+import { Sparkles, User, History, Zap, FormInput, Lock, Twitter, Send, ExternalLink, Heart, ShieldCheck } from 'lucide-react';
 
 import FormParser from './components/FormParser';
 import UserPreset from './components/UserPreset';
@@ -102,8 +102,10 @@ export default function App() {
         
         {/* Top Glass Navigation Bar */}
         <header className="glass-header">
-          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0.85rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="header-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0.85rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            
+            {/* Left Brand & Credit Badges */}
+            <div className="header-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{ 
                 width: '38px', 
                 height: '38px', 
@@ -116,35 +118,59 @@ export default function App() {
               }}>
                 <Zap size={22} style={{ color: '#fff' }} />
               </div>
+
               <div>
-                <span style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.02em', background: 'linear-gradient(135deg, #fff 0%, #a5b4fc 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  FormPulse AI
-                </span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', marginLeft: '0.5rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  PROTECTED
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.02em', background: 'linear-gradient(135deg, #fff 0%, #a5b4fc 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    FormPulse AI
+                  </span>
+                  <span className="badge badge-indigo" style={{ fontSize: '0.68rem', padding: '0.1rem 0.4rem' }}>
+                    Earntap x A4Studio Dev
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.1rem' }}>
+                  {/* Twitter Link */}
+                  <a 
+                    href="https://x.com/earntapofficial" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ fontSize: '0.75rem', color: '#818cf8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: '600' }}
+                  >
+                    <Twitter size={11} /> @earntapofficial
+                  </a>
+                  <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>&bull;</span>
+                  {/* Telegram Link */}
+                  <a 
+                    href="https://t.me/earntap" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    style={{ fontSize: '0.75rem', color: '#38bdf8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: '600' }}
+                  >
+                    <Send size={11} /> @earntap
+                  </a>
+                </div>
               </div>
             </div>
 
-            {/* Nav Tabs */}
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {/* Right Nav Tabs */}
+            <nav className="header-nav" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button 
                 className={`tab-btn ${activeTab === 'auto-submit' ? 'active' : ''}`}
                 onClick={() => setActiveTab('auto-submit')}
               >
-                <FormInput size={18} /> Auto-Submitter
+                <FormInput size={17} /> Auto-Submitter
               </button>
               <button 
                 className={`tab-btn ${activeTab === 'preset' ? 'active' : ''}`}
                 onClick={() => setActiveTab('preset')}
               >
-                <User size={18} /> My Details Preset
+                <User size={17} /> My Details Preset
               </button>
               <button 
                 className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
                 onClick={() => setActiveTab('history')}
               >
-                <History size={18} /> History ({historyList.length})
+                <History size={17} /> History ({historyList.length})
               </button>
 
               <button
@@ -162,7 +188,7 @@ export default function App() {
                   alignItems: 'center',
                   gap: '0.35rem',
                   fontSize: '0.8rem',
-                  marginLeft: '0.5rem'
+                  marginLeft: '0.4rem'
                 }}
               >
                 <Lock size={14} /> Lock Site
@@ -221,9 +247,74 @@ export default function App() {
           )}
         </main>
 
-        {/* Footer */}
-        <footer style={{ borderTop: '1px solid var(--border-color)', padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-          FormPulse AI Auto-Submitter &bull; Protected Access &bull; 100% Client-Side
+        {/* Footer with Full Credits & Social Links */}
+        <footer style={{ borderTop: '1px solid var(--border-color)', background: 'rgba(9, 13, 22, 0.95)', padding: '2rem 1.5rem' }}>
+          <div className="footer-container" style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            
+            {/* Footer Credits */}
+            <div>
+              <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                FormPulse AI &bull; Created by <span style={{ color: '#818cf8' }}>Earntap</span> & <span style={{ color: '#c084fc' }}>A4Studio Dev</span>
+              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                Automated Google Form Submitter & Multi-Wallet Filler &bull; 100% Protected Client-Side
+              </p>
+            </div>
+
+            {/* Footer Social Buttons */}
+            <div className="footer-socials" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <a 
+                href="https://x.com/earntapofficial" 
+                target="_blank" 
+                rel="noreferrer"
+                className="social-link-btn"
+                style={{
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(99, 102, 241, 0.12)',
+                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  color: '#a5b4fc',
+                  textDecoration: 'none',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Twitter size={14} style={{ color: '#818cf8' }} /> Twitter: @earntapofficial <ExternalLink size={12} />
+              </a>
+
+              <a 
+                href="https://t.me/earntap" 
+                target="_blank" 
+                rel="noreferrer"
+                className="social-link-btn"
+                style={{
+                  padding: '0.45rem 0.85rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'rgba(6, 182, 212, 0.12)',
+                  border: '1px solid rgba(6, 182, 212, 0.3)',
+                  color: '#67e8f9',
+                  textDecoration: 'none',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Send size={14} style={{ color: '#38bdf8' }} /> Telegram: @earntap <ExternalLink size={12} />
+              </a>
+            </div>
+
+          </div>
+
+          <div style={{ maxWidth: '1100px', margin: '1.25rem auto 0', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+            &copy; 2026 <strong>Earntap</strong> &amp; <strong>A4Studio Dev</strong>. All rights reserved.
+          </div>
         </footer>
       </div>
     </AccessGate>
