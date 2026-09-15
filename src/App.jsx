@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, User, History, Zap, FormInput, Plus, Trash2, Sliders, CheckCircle2 } from 'lucide-react';
+import { Sparkles, User, History, Zap, FormInput, Lock } from 'lucide-react';
 
 import FormParser from './components/FormParser';
 import UserPreset from './components/UserPreset';
 import FieldMapper from './components/FieldMapper';
 import Submitter from './components/Submitter';
 import HistoryLog from './components/HistoryLog';
+import AccessGate from './components/AccessGate';
 
 import { loadUserPreset, loadSubmissionHistory, clearSubmissionHistory, DEFAULT_PRESET } from './utils/storage';
 import { generateFieldValue } from './utils/formUtils';
@@ -27,7 +28,6 @@ export default function App() {
     setHistoryList(loadSubmissionHistory());
   }, []);
 
-  // Helper to re-populate all fields based on current preset and parsed form schema
   const fillFieldsForSchema = (schema, preset) => {
     if (!schema || !schema.fields) return {};
     const newValues = {};
@@ -37,7 +37,6 @@ export default function App() {
     return newValues;
   };
 
-  // Called when user inputs/pastes a Google Form URL
   const handleParseForm = async (formUrl) => {
     setIsLoadingForm(true);
     setParseError(null);
@@ -54,7 +53,6 @@ export default function App() {
     }
   };
 
-  // Handle individual field value edits by user
   const handleFieldValueChange = (entryId, newValue) => {
     setFieldValues(prev => ({
       ...prev,
@@ -67,14 +65,12 @@ export default function App() {
     }));
   };
 
-  // Re-run auto fill for all fields
   const handleRegenerateAll = () => {
     if (parsedForm) {
       setFieldValues(fillFieldsForSchema(parsedForm, userPreset));
     }
   };
 
-  // When user updates preset profile
   const handleUpdatePreset = (newPreset) => {
     setUserPreset(newPreset);
     if (parsedForm) {
@@ -82,7 +78,6 @@ export default function App() {
     }
   };
 
-  // Clear history handler
   const handleClearHistory = () => {
     if (window.confirm('Clear all submission history logs?')) {
       const updated = clearSubmissionHistory();
@@ -90,151 +85,147 @@ export default function App() {
     }
   };
 
-  // Called after a submission completes
   const handleSubmissionComplete = () => {
     setHistoryList(loadSubmissionHistory());
   };
 
-  // Create manual form schema if URL fetch fails or user wants custom entries
-  const handleCreateManualForm = () => {
-    const manualSchema = {
-      formTitle: 'Custom Google Form',
-      formDescription: 'Manually specified entry fields',
-      formUrl: '',
-      submitUrl: 'https://docs.google.com/forms/d/e/YOUR_FORM_ID/formResponse',
-      formId: 'YOUR_FORM_ID',
-      fields: [
-        {
-          id: '1',
-          entryId: 'entry.1000001',
-          title: 'Full Name',
-          description: '',
-          type: 'short_text',
-          required: true,
-          choices: []
-        },
-        {
-          id: '2',
-          entryId: 'entry.1000002',
-          title: 'Email Address',
-          description: '',
-          type: 'short_text',
-          required: true,
-          choices: []
-        }
-      ]
-    };
-    setParsedForm(manualSchema);
-    setFieldValues(fillFieldsForSchema(manualSchema, userPreset));
+  const handleLockOut = () => {
+    if (window.confirm('Lock site and remove saved access code from this browser?')) {
+      localStorage.removeItem('formpulse_access_code');
+      window.location.reload();
+    }
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      
-      {/* Top Glass Navigation Bar */}
-      <header className="glass-header">
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0.85rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ 
-              width: '38px', 
-              height: '38px', 
-              borderRadius: 'var(--radius-sm)', 
-              background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
-            }}>
-              <Zap size={22} style={{ color: '#fff' }} />
-            </div>
-            <div>
-              <span style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.02em', background: 'linear-gradient(135deg, #fff 0%, #a5b4fc 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                FormPulse AI
-              </span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', marginLeft: '0.5rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                CLIENT ONLY
-              </span>
-            </div>
-          </div>
-
-          {/* Nav Tabs */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <button 
-              className={`tab-btn ${activeTab === 'auto-submit' ? 'active' : ''}`}
-              onClick={() => setActiveTab('auto-submit')}
-            >
-              <FormInput size={18} /> Auto-Submitter
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'preset' ? 'active' : ''}`}
-              onClick={() => setActiveTab('preset')}
-            >
-              <User size={18} /> My Details Preset
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('history')}
-            >
-              <History size={18} /> History ({historyList.length})
-            </button>
-          </nav>
-        </div>
-      </header>
-
-      {/* Main Content Workspace */}
-      <main style={{ flex: 1, maxWidth: '1100px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+    <AccessGate>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         
-        {activeTab === 'auto-submit' && (
-          <div>
-            {/* Form Link Input Hero */}
-            <FormParser 
-              onParseSuccess={handleParseForm} 
-              isLoading={isLoadingForm}
-              error={parseError}
-            />
+        {/* Top Glass Navigation Bar */}
+        <header className="glass-header">
+          <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0.85rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ 
+                width: '38px', 
+                height: '38px', 
+                borderRadius: 'var(--radius-sm)', 
+                background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)'
+              }}>
+                <Zap size={22} style={{ color: '#fff' }} />
+              </div>
+              <div>
+                <span style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.02em', background: 'linear-gradient(135deg, #fff 0%, #a5b4fc 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  FormPulse AI
+                </span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-cyan)', marginLeft: '0.5rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  PROTECTED
+                </span>
+              </div>
+            </div>
 
-            {/* Parsed Fields Inspection & Auto-Fill Grid */}
-            {parsedForm && (
-              <>
-                <FieldMapper 
-                  parsedForm={parsedForm}
-                  userPreset={userPreset}
-                  fieldValues={fieldValues}
-                  onFieldValueChange={handleFieldValueChange}
-                  onRegenerate={handleRegenerateAll}
-                />
+            {/* Nav Tabs */}
+            <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button 
+                className={`tab-btn ${activeTab === 'auto-submit' ? 'active' : ''}`}
+                onClick={() => setActiveTab('auto-submit')}
+              >
+                <FormInput size={18} /> Auto-Submitter
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'preset' ? 'active' : ''}`}
+                onClick={() => setActiveTab('preset')}
+              >
+                <User size={18} /> My Details Preset
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+                onClick={() => setActiveTab('history')}
+              >
+                <History size={18} /> History ({historyList.length})
+              </button>
 
-                {/* Submitter Action Bar */}
-                <Submitter 
-                  parsedForm={parsedForm}
-                  userPreset={userPreset}
-                  fieldValues={fieldValues}
-                  onSubmissionComplete={handleSubmissionComplete}
-                />
-              </>
-            )}
+              <button
+                type="button"
+                onClick={handleLockOut}
+                title="Lock Site Security"
+                style={{
+                  background: 'rgba(244, 63, 94, 0.1)',
+                  border: '1px solid rgba(244, 63, 94, 0.3)',
+                  color: 'var(--accent-rose)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  fontSize: '0.8rem',
+                  marginLeft: '0.5rem'
+                }}
+              >
+                <Lock size={14} /> Lock Site
+              </button>
+            </nav>
           </div>
-        )}
+        </header>
 
-        {activeTab === 'preset' && (
-          <UserPreset 
-            preset={userPreset} 
-            onUpdatePreset={handleUpdatePreset} 
-          />
-        )}
+        {/* Main Content Workspace */}
+        <main style={{ flex: 1, maxWidth: '1100px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+          
+          {activeTab === 'auto-submit' && (
+            <div>
+              {/* Form Link Input Hero */}
+              <FormParser 
+                onParseSuccess={handleParseForm} 
+                isLoading={isLoadingForm}
+                error={parseError}
+              />
 
-        {activeTab === 'history' && (
-          <HistoryLog 
-            historyList={historyList} 
-            onClearHistory={handleClearHistory} 
-          />
-        )}
-      </main>
+              {/* Parsed Fields Inspection & Auto-Fill Grid */}
+              {parsedForm && (
+                <>
+                  <FieldMapper 
+                    parsedForm={parsedForm}
+                    userPreset={userPreset}
+                    fieldValues={fieldValues}
+                    onFieldValueChange={handleFieldValueChange}
+                    onRegenerate={handleRegenerateAll}
+                  />
 
-      {/* Footer */}
-      <footer style={{ borderTop: '1px solid var(--border-color)', padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
-        FormPulse AI Auto-Submitter &bull; Pre-set personal details priority auto-filler &bull; 100% Client-Side
-      </footer>
-    </div>
+                  {/* Submitter Action Bar */}
+                  <Submitter 
+                    parsedForm={parsedForm}
+                    userPreset={userPreset}
+                    fieldValues={fieldValues}
+                    onSubmissionComplete={handleSubmissionComplete}
+                  />
+                </>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'preset' && (
+            <UserPreset 
+              preset={userPreset} 
+              onUpdatePreset={handleUpdatePreset} 
+            />
+          )}
+
+          {activeTab === 'history' && (
+            <HistoryLog 
+              historyList={historyList} 
+              onClearHistory={handleClearHistory} 
+            />
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer style={{ borderTop: '1px solid var(--border-color)', padding: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+          FormPulse AI Auto-Submitter &bull; Protected Access &bull; 100% Client-Side
+        </footer>
+      </div>
+    </AccessGate>
   );
 }
