@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wallet, Save, Trash2, CheckCircle2, ShieldCheck, ListChecks, Sparkles, ToggleLeft, ToggleRight, Twitter, Send, Mail, User, CheckSquare, Square } from 'lucide-react';
+import { Wallet, Save, Trash2, CheckCircle2, ShieldCheck, ListChecks, Sparkles, Twitter, Send, Mail, User, CheckSquare, Square, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
 import { saveUserPreset } from '../utils/storage';
 
 export default function UserPreset({ preset, onUpdatePreset }) {
@@ -7,12 +7,7 @@ export default function UserPreset({ preset, onUpdatePreset }) {
   const [walletList, setWalletList] = useState([]);
   const [walletText, setWalletText] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
-
-  // Optional fixed handles
-  const [fixedTwitter, setFixedTwitter] = useState(preset.fixedTwitter || '');
-  const [fixedTelegram, setFixedTelegram] = useState(preset.fixedTelegram || '');
-  const [fixedEmail, setFixedEmail] = useState(preset.fixedEmail || '');
-  const [fixedName, setFixedName] = useState(preset.fixedName || '');
+  const [expandedIndex, setExpandedIndex] = useState(null);
 
   const [savedStatus, setSavedStatus] = useState(false);
 
@@ -21,15 +16,16 @@ export default function UserPreset({ preset, onUpdatePreset }) {
       setWalletList(preset.walletList);
       setWalletText(preset.walletList.map(w => w.address).join('\n'));
     } else if (preset && Array.isArray(preset.walletAddresses) && preset.walletAddresses.length > 0) {
-      const formatted = preset.walletAddresses.map(addr => ({ address: addr, enabled: true }));
+      const formatted = preset.walletAddresses.map(addr => ({ 
+        address: addr, 
+        enabled: true,
+        twitter: '',
+        telegram: '',
+        email: '',
+        name: ''
+      }));
       setWalletList(formatted);
       setWalletText(preset.walletAddresses.join('\n'));
-    }
-    if (preset) {
-      setFixedTwitter(preset.fixedTwitter || '');
-      setFixedTelegram(preset.fixedTelegram || '');
-      setFixedEmail(preset.fixedEmail || '');
-      setFixedName(preset.fixedName || '');
     }
   }, [preset]);
 
@@ -39,23 +35,35 @@ export default function UserPreset({ preset, onUpdatePreset }) {
     setWalletList(updated);
   };
 
+  // Update custom detail for specific wallet
+  const handleWalletDetailChange = (index, field, val) => {
+    const updated = walletList.map((item, i) => i === index ? { ...item, [field]: val } : item);
+    setWalletList(updated);
+  };
+
   // Toggle all wallets
   const setAllWalletsStatus = (status) => {
     const updated = walletList.map(item => ({ ...item, enabled: status }));
     setWalletList(updated);
   };
 
-  // Parse text area into walletList objects
+  // Parse text area into walletList objects preserving existing custom details
   const parseTextToWallets = (text) => {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const uniqueLines = Array.from(new Set(lines));
     
-    // Preserve existing enabled states
-    const existingMap = new Map(walletList.map(w => [w.address.toLowerCase(), w.enabled]));
-    return uniqueLines.map(addr => ({
-      address: addr,
-      enabled: existingMap.has(addr.toLowerCase()) ? existingMap.get(addr.toLowerCase()) : true
-    }));
+    const existingMap = new Map(walletList.map(w => [w.address.toLowerCase(), w]));
+    return uniqueLines.map(addr => {
+      const existing = existingMap.get(addr.toLowerCase());
+      return {
+        address: addr,
+        enabled: existing ? existing.enabled : true,
+        twitter: existing ? (existing.twitter || '') : '',
+        telegram: existing ? (existing.telegram || '') : '',
+        email: existing ? (existing.email || '') : '',
+        name: existing ? (existing.name || '') : ''
+      };
+    });
   };
 
   const handleSave = (e) => {
@@ -65,11 +73,7 @@ export default function UserPreset({ preset, onUpdatePreset }) {
     setWalletText(finalWallets.map(w => w.address).join('\n'));
 
     const updatedPreset = {
-      walletList: finalWallets,
-      fixedTwitter: fixedTwitter.trim(),
-      fixedTelegram: fixedTelegram.trim(),
-      fixedEmail: fixedEmail.trim(),
-      fixedName: fixedName.trim()
+      walletList: finalWallets
     };
 
     saveUserPreset(updatedPreset);
@@ -82,7 +86,7 @@ export default function UserPreset({ preset, onUpdatePreset }) {
   const activeCount = walletList.filter(w => w.enabled).length;
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '920px', margin: '0 auto' }}>
       <div className="glass-card" style={{ padding: '2rem' }}>
         
         {/* Header */}
@@ -90,10 +94,10 @@ export default function UserPreset({ preset, onUpdatePreset }) {
           <div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <Wallet style={{ color: 'var(--primary)' }} size={26} />
-              My Details & Multi-Address Manager
+              Per-Wallet Custom Details & Address Manager
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.2rem' }}>
-              Manage active wallet addresses and set your optional fixed handles (or leave blank to auto-generate!).
+              Add specific Twitter, Telegram, or Email for each wallet! Blank fields are auto-generated dynamically.
             </p>
           </div>
           
@@ -103,7 +107,7 @@ export default function UserPreset({ preset, onUpdatePreset }) {
             className="btn-secondary"
             style={{ fontSize: '0.85rem' }}
           >
-            {isEditMode ? 'Switch to List View' : 'Paste / Bulk Edit Text'}
+            {isEditMode ? 'Switch to Per-Wallet Details View' : 'Paste / Bulk Edit Text'}
           </button>
         </div>
 
@@ -114,7 +118,7 @@ export default function UserPreset({ preset, onUpdatePreset }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#a5b4fc', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <ListChecks size={18} style={{ color: 'var(--accent-emerald)' }} />
-                Wallet Addresses ({activeCount} Active / {walletList.length} Total)
+                Loaded Wallets ({activeCount} Active / {walletList.length} Total)
               </h3>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -136,49 +140,125 @@ export default function UserPreset({ preset, onUpdatePreset }) {
               </div>
             </div>
 
-            {/* List View with Enable/Disable Toggles */}
+            {/* Per-Wallet Interactive Cards List */}
             {!isEditMode ? (
               <div>
                 {walletList.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '350px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                    {walletList.map((item, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => toggleWalletStatus(idx)}
-                        style={{
-                          padding: '0.75rem 1rem',
-                          borderRadius: 'var(--radius-sm)',
-                          border: item.enabled ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--border-color)',
-                          background: item.enabled ? 'rgba(16, 185, 129, 0.08)' : 'rgba(9, 13, 22, 0.4)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          {item.enabled ? (
-                            <CheckSquare size={18} style={{ color: 'var(--accent-emerald)' }} />
-                          ) : (
-                            <Square size={18} style={{ color: 'var(--text-dim)' }} />
-                          )}
-                          <span style={{ 
-                            fontSize: '0.85rem', 
-                            fontFamily: 'var(--font-mono)', 
-                            fontWeight: '600',
-                            color: item.enabled ? '#fff' : 'var(--text-dim)',
-                            textDecoration: item.enabled ? 'none' : 'line-through'
-                          }}>
-                            #{idx + 1}: {item.address}
-                          </span>
-                        </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '450px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                    {walletList.map((item, idx) => {
+                      const isExpanded = expandedIndex === idx;
+                      const hasCustom = item.twitter || item.telegram || item.email || item.name;
 
-                        <span className={`badge ${item.enabled ? 'badge-emerald' : 'badge-rose'}`} style={{ fontSize: '0.7rem' }}>
-                          {item.enabled ? 'ACTIVE (SUBMIT)' : 'HIDDEN (SKIP)'}
-                        </span>
-                      </div>
-                    ))}
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '0.85rem 1rem',
+                            borderRadius: 'var(--radius-sm)',
+                            border: item.enabled ? '1px solid rgba(99, 102, 241, 0.35)' : '1px solid var(--border-color)',
+                            background: item.enabled ? 'rgba(17, 24, 39, 0.75)' : 'rgba(9, 13, 22, 0.4)',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div 
+                              onClick={() => toggleWalletStatus(idx)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', flex: 1 }}
+                            >
+                              {item.enabled ? (
+                                <CheckSquare size={18} style={{ color: 'var(--accent-emerald)' }} />
+                              ) : (
+                                <Square size={18} style={{ color: 'var(--text-dim)' }} />
+                              )}
+                              <span style={{ 
+                                fontSize: '0.88rem', 
+                                fontFamily: 'var(--font-mono)', 
+                                fontWeight: '700',
+                                color: item.enabled ? '#fff' : 'var(--text-dim)',
+                                textDecoration: item.enabled ? 'none' : 'line-through'
+                              }}>
+                                #{idx + 1}: {item.address}
+                              </span>
+                              {hasCustom && (
+                                <span className="badge badge-indigo" style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }}>
+                                  Custom Handles Set
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                              <span className={`badge ${item.enabled ? 'badge-emerald' : 'badge-rose'}`} style={{ fontSize: '0.7rem' }}>
+                                {item.enabled ? 'ACTIVE' : 'HIDDEN'}
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => setExpandedIndex(isExpanded ? null : idx)}
+                                className="btn-secondary"
+                                style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                              >
+                                <Edit3 size={12} /> {isExpanded ? 'Hide Custom Fields' : 'Custom Handles'}
+                                {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Per-Wallet Custom Details Inputs */}
+                          {isExpanded && (
+                            <div style={{ 
+                              marginTop: '0.85rem', 
+                              paddingTop: '0.85rem', 
+                              borderTop: '1px solid rgba(255,255,255,0.08)',
+                              display: 'grid', 
+                              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                              gap: '0.75rem' 
+                            }}>
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                  <Twitter size={12} style={{ display: 'inline', marginRight: '3px', color: '#818cf8' }} /> Twitter/X Handle (Optional)
+                                </label>
+                                <input
+                                  type="text"
+                                  className="input-control"
+                                  style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
+                                  placeholder="e.g. @user_x1 (blank -> Auto)"
+                                  value={item.twitter || ''}
+                                  onChange={(e) => handleWalletDetailChange(idx, 'twitter', e.target.value)}
+                                />
+                              </div>
+
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                  <Send size={12} style={{ display: 'inline', marginRight: '3px', color: '#38bdf8' }} /> Telegram Username (Optional)
+                                </label>
+                                <input
+                                  type="text"
+                                  className="input-control"
+                                  style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
+                                  placeholder="e.g. @user_tg1 (blank -> Auto)"
+                                  value={item.telegram || ''}
+                                  onChange={(e) => handleWalletDetailChange(idx, 'telegram', e.target.value)}
+                                />
+                              </div>
+
+                              <div>
+                                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                  <Mail size={12} style={{ display: 'inline', marginRight: '3px', color: '#34d399' }} /> Email Address (Optional)
+                                </label>
+                                <input
+                                  type="email"
+                                  className="input-control"
+                                  style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
+                                  placeholder="e.g. email1@gmail.com (blank -> Auto)"
+                                  value={item.email || ''}
+                                  onChange={(e) => handleWalletDetailChange(idx, 'email', e.target.value)}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
@@ -204,72 +284,22 @@ export default function UserPreset({ preset, onUpdatePreset }) {
             )}
           </div>
 
-          {/* Optional Fixed Handles Section */}
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '0.4rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sparkles size={18} style={{ color: 'var(--accent-cyan)' }} />
-              Optional Fixed Handles (Auto-Gen Fallback if Left Blank)
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-              If you want to use your OWN fixed X username, Telegram handle, or Email, type them below. If left blank, realistic unique handles will be generated automatically!
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-              {/* Twitter / X Handle */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>
-                  <Twitter size={14} style={{ display: 'inline', marginRight: '4px', color: '#818cf8' }} /> Fixed Twitter/X Handle (Optional)
-                </label>
-                <input 
-                  type="text" 
-                  className="input-control" 
-                  value={fixedTwitter} 
-                  onChange={(e) => setFixedTwitter(e.target.value)}
-                  placeholder="e.g. @my_twitter_handle (or leave blank)"
-                />
-              </div>
-
-              {/* Telegram Username */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>
-                  <Send size={14} style={{ display: 'inline', marginRight: '4px', color: '#38bdf8' }} /> Fixed Telegram Username (Optional)
-                </label>
-                <input 
-                  type="text" 
-                  className="input-control" 
-                  value={fixedTelegram} 
-                  onChange={(e) => setFixedTelegram(e.target.value)}
-                  placeholder="e.g. @my_telegram_user (or leave blank)"
-                />
-              </div>
-
-              {/* Email Address */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>
-                  <Mail size={14} style={{ display: 'inline', marginRight: '4px', color: '#34d399' }} /> Fixed Gmail / Email Address (Optional)
-                </label>
-                <input 
-                  type="email" 
-                  className="input-control" 
-                  value={fixedEmail} 
-                  onChange={(e) => setFixedEmail(e.target.value)}
-                  placeholder="e.g. myemail@gmail.com (or leave blank)"
-                />
-              </div>
-
-              {/* Full Name */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.4rem', color: 'var(--text-muted)' }}>
-                  <User size={14} style={{ display: 'inline', marginRight: '4px', color: '#f472b6' }} /> Fixed Full Name (Optional)
-                </label>
-                <input 
-                  type="text" 
-                  className="input-control" 
-                  value={fixedName} 
-                  onChange={(e) => setFixedName(e.target.value)}
-                  placeholder="e.g. John Doe (or leave blank)"
-                />
-              </div>
+          {/* Banner explaining Auto-Gen Fallback */}
+          <div style={{
+            padding: '1rem 1.25rem',
+            background: 'rgba(6, 182, 212, 0.1)',
+            border: '1px solid rgba(6, 182, 212, 0.3)',
+            borderRadius: 'var(--radius-sm)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            fontSize: '0.85rem',
+            color: '#67e8f9'
+          }}>
+            <Sparkles size={20} style={{ flexShrink: 0, color: 'var(--accent-cyan)' }} />
+            <div>
+              <strong>Per-Wallet Fallback Guarantee:</strong> You can type specific Twitter, Telegram, or Email handles for any specific wallet address. Any field left blank will automatically generate unique, realistic details for that wallet run!
             </div>
           </div>
 
@@ -282,11 +312,11 @@ export default function UserPreset({ preset, onUpdatePreset }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               {savedStatus && (
                 <span style={{ color: 'var(--accent-emerald)', fontSize: '0.9rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <CheckCircle2 size={16} /> Settings Saved!
+                  <CheckCircle2 size={16} /> Per-Wallet Settings Saved!
                 </span>
               )}
               <button type="submit" className="btn-primary" style={{ padding: '0.85rem 1.75rem', fontSize: '1rem' }}>
-                <Save size={18} /> Save Profile & Settings
+                <Save size={18} /> Save Per-Wallet Settings
               </button>
             </div>
           </div>
