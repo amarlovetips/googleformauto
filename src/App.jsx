@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, User, History, Zap, FormInput, Lock, Twitter, Send, ExternalLink, Heart, ShieldCheck } from 'lucide-react';
+import { Sparkles, User, History, Zap, FormInput, Lock, Twitter, Send, ExternalLink } from 'lucide-react';
 
 import FormParser from './components/FormParser';
 import UserPreset from './components/UserPreset';
@@ -7,6 +7,7 @@ import FieldMapper from './components/FieldMapper';
 import Submitter from './components/Submitter';
 import HistoryLog from './components/HistoryLog';
 import AccessGate from './components/AccessGate';
+import TweetEmbed from './components/TweetEmbed';
 
 import { loadUserPreset, loadSubmissionHistory, clearSubmissionHistory, DEFAULT_PRESET } from './utils/storage';
 import { generateFieldValue } from './utils/formUtils';
@@ -129,7 +130,6 @@ export default function App() {
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.1rem' }}>
-                  {/* Twitter Link */}
                   <a 
                     href="https://x.com/earntapofficial" 
                     target="_blank" 
@@ -139,7 +139,6 @@ export default function App() {
                     <Twitter size={11} /> @earntapofficial
                   </a>
                   <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem' }}>&bull;</span>
-                  {/* Telegram Link */}
                   <a 
                     href="https://t.me/earntap" 
                     target="_blank" 
@@ -248,16 +247,16 @@ export default function App() {
         </main>
 
         {/* Footer with Full Credits & Social Links */}
-        <footer style={{ borderTop: '1px solid var(--border-color)', background: 'rgba(9, 13, 22, 0.95)', padding: '2rem 1.5rem' }}>
+        <footer style={{ borderTop: '1px solid var(--border-color)', background: 'rgba(9, 13, 22, 0.95)', padding: '2.5rem 1.5rem 2rem' }}>
           <div className="footer-container" style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             
             {/* Footer Credits */}
             <div>
               <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                FormPulse AI &bull; Created by <span style={{ color: '#818cf8' }}>Earntap</span> & <span style={{ color: '#c084fc' }}>A4Studio Dev</span>
+                FormPulse AI &bull; Created by <span style={{ color: '#818cf8' }}>Earntap</span> &amp; <span style={{ color: '#c084fc' }}>A4Studio Dev</span>
               </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Automated Google Form Submitter & Multi-Wallet Filler &bull; 100% Protected Client-Side
+                Automated Google Form Submitter &amp; Multi-Wallet Filler &bull; 100% Protected Client-Side
               </p>
             </div>
 
@@ -312,7 +311,12 @@ export default function App() {
 
           </div>
 
-          <div style={{ maxWidth: '1100px', margin: '1.25rem auto 0', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+          {/* Embedded Access Code Tweet Post Widget */}
+          <div style={{ maxWidth: '1100px', margin: '1.5rem auto 0' }}>
+            <TweetEmbed />
+          </div>
+
+          <div style={{ maxWidth: '1100px', margin: '1.5rem auto 0', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
             &copy; 2026 <strong>Earntap</strong> &amp; <strong>A4Studio Dev</strong>. All rights reserved.
           </div>
         </footer>

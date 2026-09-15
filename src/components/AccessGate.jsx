@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, KeyRound, ArrowRight, ShieldAlert, Sparkles, Eye, EyeOff, LockKeyhole } from 'lucide-react';
+import TweetEmbed from './TweetEmbed';
 
 const ACCESS_CODE_TARGET = 'I love Earntap';
 const AUTH_STORAGE_KEY = 'formpulse_access_code';
@@ -33,12 +34,6 @@ export default function AccessGate({ children }) {
     }
   };
 
-  const handleLockSite = () => {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    setIsAuthenticated(false);
-    setInputCode('');
-  };
-
   if (isChecking) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)' }}>
@@ -53,13 +48,14 @@ export default function AccessGate({ children }) {
       <div style={{ 
         minHeight: '100vh', 
         display: 'flex', 
+        flexDirection: 'column',
         alignItems: 'center', 
         justifyContent: 'center', 
-        padding: '1.5rem',
+        padding: '2rem 1.5rem',
         background: 'var(--bg-dark)',
         backgroundImage: 'radial-gradient(at 50% 0%, rgba(99, 102, 241, 0.2) 0px, transparent 60%)'
       }}>
-        <div className="glass-card" style={{ maxWidth: '440px', width: '100%', padding: '2.5rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div className="glass-card" style={{ maxWidth: '520px', width: '100%', padding: '2.5rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
           
           {/* Glowing Lock Icon Header */}
           <div style={{
@@ -85,7 +81,7 @@ export default function AccessGate({ children }) {
           </h1>
 
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.5' }}>
-            Please enter your Access Code to unlock the site. Code is stored in browser memory so you don't need to re-enter.
+            Please enter your Access Code to unlock the site. Check out the announcement tweet below to like, comment &amp; get the code!
           </p>
 
           <form onSubmit={handleUnlock} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -140,10 +136,12 @@ export default function AccessGate({ children }) {
             </div>
           )}
         </div>
+
+        {/* Access Code Tweet Widget Embed (Visible during Lock state) */}
+        <TweetEmbed />
       </div>
     );
   }
 
-  // Pass lock handler down if needed
   return children;
 }
