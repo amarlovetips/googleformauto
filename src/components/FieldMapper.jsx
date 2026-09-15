@@ -1,26 +1,24 @@
 import React, { useState } from 'react';
-import { Check, User, Sparkles, Sliders, RefreshCcw, Wallet, ListFilter, CheckSquare } from 'lucide-react';
-import { generateFieldValue, generateRealisticIdentity } from '../utils/formUtils';
+import { Check, User, Sparkles, Sliders, RefreshCcw, Wallet, CheckSquare } from 'lucide-react';
+import { generateFieldValue, generateDeterministicIdentity, getActiveWallets } from '../utils/formUtils';
 
 export default function FieldMapper({ parsedForm, userPreset, onFieldValueChange }) {
   const [selectedWalletIdx, setSelectedWalletIdx] = useState(0);
-  const [overrideMap, setOverrideMap] = useState({}); // Stores user manual overrides per wallet run
+  const [overrideMap, setOverrideMap] = useState({});
 
   if (!parsedForm || !parsedForm.fields) return null;
 
   const { formTitle, formDescription, fields } = parsedForm;
-  const wallets = (userPreset && Array.isArray(userPreset.walletAddresses)) ? userPreset.walletAddresses : [];
+  const activeWallets = getActiveWallets(userPreset);
 
-  // Generate identity for selected wallet index
-  const freshIdentity = generateRealisticIdentity();
+  const currentIdentity = generateDeterministicIdentity(selectedWalletIdx, userPreset);
 
-  // Compute field state for currently selected wallet index
   const getFieldState = (field) => {
     const overrideKey = `${selectedWalletIdx}_${field.entryId}`;
     if (overrideMap[overrideKey] !== undefined) {
       return overrideMap[overrideKey];
     }
-    return generateFieldValue(field, userPreset, selectedWalletIdx, freshIdentity);
+    return generateFieldValue(field, userPreset, selectedWalletIdx, currentIdentity);
   };
 
   const handleValueEdit = (field, newTargetVal) => {
@@ -208,15 +206,15 @@ export default function FieldMapper({ parsedForm, userPreset, onFieldValueChange
       </div>
 
       {/* Multi-Wallet Inspector Selector Bar */}
-      {wallets.length > 0 && (
+      {activeWallets.length > 0 && (
         <div className="glass-card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem', borderColor: 'rgba(6, 182, 212, 0.4)', background: 'rgba(15, 23, 42, 0.7)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#67e8f9', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Wallet size={16} /> Inspect Form Data For All {wallets.length} Wallet Submissions:
+                <Wallet size={16} /> Inspect Form Data For All {activeWallets.length} Active Wallet Submissions:
               </span>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                Select any wallet address below to preview its exact wallet address + auto-generated Twitter handle and proof URL!
+                Select any active wallet address below to preview its exact wallet address + Twitter handle and proof URL!
               </p>
             </div>
 
@@ -228,7 +226,7 @@ export default function FieldMapper({ parsedForm, userPreset, onFieldValueChange
                 value={selectedWalletIdx}
                 onChange={(e) => setSelectedWalletIdx(parseInt(e.target.value) || 0)}
               >
-                {wallets.map((w, idx) => (
+                {activeWallets.map((w, idx) => (
                   <option key={idx} value={idx}>
                     #{idx + 1}: {w.substring(0, 10)}...{w.substring(w.length - 6)}
                   </option>
@@ -240,10 +238,10 @@ export default function FieldMapper({ parsedForm, userPreset, onFieldValueChange
           {/* Current Wallet Run Quick Info Badge */}
           <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
             <span style={{ color: 'var(--accent-emerald)', fontFamily: 'var(--font-mono)' }}>
-              Active Preview Wallet: <strong>{wallets[selectedWalletIdx] || 'N/A'}</strong>
+              Active Preview Wallet: <strong>{activeWallets[selectedWalletIdx] || 'N/A'}</strong>
             </span>
             <span style={{ color: 'var(--text-dim)' }}>
-              Showing Run #{selectedWalletIdx + 1} of {wallets.length} Total Submissions
+              Showing Run #{selectedWalletIdx + 1} of {activeWallets.length} Active Submissions
             </span>
           </div>
         </div>
@@ -256,7 +254,7 @@ export default function FieldMapper({ parsedForm, userPreset, onFieldValueChange
           Form Questions & Auto-Generated Answers Preview
         </h3>
         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          Showing data for Wallet Run #{selectedWalletIdx + 1}
+          Showing data for Active Wallet Run #{selectedWalletIdx + 1}
         </span>
       </div>
 

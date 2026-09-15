@@ -1,6 +1,6 @@
 /**
- * Utility for fuzzy matching wallet address fields to user preset list,
- * guaranteed unique identity generation per wallet run, and full proof formatting.
+ * Utility for fuzzy matching wallet address fields, optional fixed user handles,
+ * and guaranteed unique identity generation per wallet run.
  */
 
 // Helper to check if a title is asking for EVM / Wallet Address
@@ -16,9 +16,9 @@ const LAST_NAMES = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 
 const CRYPTO_WORDS = ['crypto', 'web3', 'eth', 'alpha', 'builder', 'hodl', 'satoshi', 'node', 'sol', 'defi', 'nft', 'gem', 'whale', 'dex', 'dao', 'ape', 'bull', 'chain', 'block', 'vault', 'hyper', 'pulse', 'prime', 'vertex', 'nexus'];
 
 /**
- * Generates a 100% unique identity for run index `i`
+ * Generates identity for run index `i`, honoring user's fixed preset handles if set.
  */
-export function generateDeterministicIdentity(runIndex = 0) {
+export function generateDeterministicIdentity(runIndex = 0, userPreset = null) {
   const firstIdx = (runIndex * 7 + 3) % FIRST_NAMES.length;
   const lastIdx = (runIndex * 11 + 5) % LAST_NAMES.length;
   const wordIdx = (runIndex * 13 + 2) % CRYPTO_WORDS.length;
@@ -27,31 +27,40 @@ export function generateDeterministicIdentity(runIndex = 0) {
   const last = LAST_NAMES[lastIdx];
   const word = CRYPTO_WORDS[wordIdx];
   
-  // Unique number suffix guaranteed per run index
   const uniqueNum = 100 + (runIndex * 17) + (runIndex % 9);
-
-  const username = `${first.toLowerCase()}_${word}${uniqueNum}`;
-  const fullName = `${first} ${last}`;
+  const fallbackUsername = `${first.toLowerCase()}_${word}${uniqueNum}`;
   
-  // Twitter / X
-  const twitterHandle = `@${username}`;
-  // 19 digit realistic status ID based on index
+  // Honor user's fixed handles if provided, otherwise use auto-generated unique fallback
+  const twitterHandle = (userPreset && userPreset.fixedTwitter && userPreset.fixedTwitter.trim())
+    ? userPreset.fixedTwitter.trim()
+    : `@${fallbackUsername}`;
+
+  const cleanTwitterUsername = twitterHandle.replace('@', '');
   const tweetStatusId = '1824' + String(100000000000000 + runIndex * 98765432101 + 12345).substring(0, 15);
-  const tweetUrl = `https://x.com/${username}/status/${tweetStatusId}`;
+  const tweetUrl = `https://x.com/${cleanTwitterUsername}/status/${tweetStatusId}`;
 
-  // Telegram
-  const telegramHandle = `@${first.toLowerCase()}_tg_${uniqueNum}`;
-  const telegramPostUrl = `https://t.me/${first.toLowerCase()}_tg_${uniqueNum}/${10 + runIndex * 3}`;
+  const telegramHandle = (userPreset && userPreset.fixedTelegram && userPreset.fixedTelegram.trim())
+    ? userPreset.fixedTelegram.trim()
+    : `@${first.toLowerCase()}_tg_${uniqueNum}`;
 
-  // Discord & Email
-  const discord = `${first.toLowerCase()}_${word}#${1000 + (runIndex * 29) % 8999}`;
-  const email = `${first.toLowerCase()}.${word}${uniqueNum}@gmail.com`;
+  const cleanTelegramUsername = telegramHandle.replace('@', '');
+  const telegramPostUrl = `https://t.me/${cleanTelegramUsername}/${10 + runIndex * 3}`;
 
-  // Medium & YouTube
-  const mediumUrl = `https://medium.com/@${username}`;
-  const youtubeUrl = `https://youtube.com/@${username}`;
+  const email = (userPreset && userPreset.fixedEmail && userPreset.fixedEmail.trim())
+    ? userPreset.fixedEmail.trim()
+    : `${first.toLowerCase()}.${word}${uniqueNum}@gmail.com`;
 
-  // Transaction Hash (64 hex digits guaranteed unique per run index)
+  const fullName = (userPreset && userPreset.fixedName && userPreset.fixedName.trim())
+    ? userPreset.fixedName.trim()
+    : `${first} ${last}`;
+
+  const discord = (userPreset && userPreset.fixedDiscord && userPreset.fixedDiscord.trim())
+    ? userPreset.fixedDiscord.trim()
+    : `${first.toLowerCase()}_${word}#${1000 + (runIndex * 29) % 8999}`;
+
+  const mediumUrl = `https://medium.com/@${cleanTwitterUsername}`;
+  const youtubeUrl = `https://youtube.com/@${cleanTwitterUsername}`;
+
   const generateTxHash = (index) => {
     const chars = '0123456789abcdef';
     let hash = '0x';
@@ -65,7 +74,7 @@ export function generateDeterministicIdentity(runIndex = 0) {
   return {
     runIndex,
     fullName,
-    username,
+    username: cleanTwitterUsername,
     twitterHandle,
     tweetUrl,
     telegramHandle,
@@ -81,30 +90,44 @@ export function generateDeterministicIdentity(runIndex = 0) {
 export const generateRealisticIdentity = generateDeterministicIdentity;
 
 /**
+ * Returns active enabled wallets array from userPreset
+ */
+export function getActiveWallets(userPreset) {
+  if (!userPreset) return [];
+  if (Array.isArray(userPreset.walletList) && userPreset.walletList.length > 0) {
+    return userPreset.walletList.filter(w => w.enabled !== false).map(w => w.address.trim()).filter(Boolean);
+  }
+  if (Array.isArray(userPreset.walletAddresses)) {
+    return userPreset.walletAddresses.map(w => w.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+/**
  * Auto-generates value for a field:
- * - Wallet field -> Pick wallet address from user preset list at current index.
- * - All other fields -> 100% Auto-Generated Realistic Data matching identity.
+ * - Wallet field -> Pick active wallet address at current index.
+ * - All other fields -> Deterministic Identity (honoring fixed handles if set).
  */
 export function generateFieldValue(field, userPreset, currentWalletIndex = 0, providedIdentity = null) {
   const title = (field.title || '').toLowerCase();
   const description = (field.description || '').toLowerCase();
   const combinedText = title + ' ' + description;
-  const wallets = (userPreset && Array.isArray(userPreset.walletAddresses)) ? userPreset.walletAddresses : [];
+  const activeWallets = getActiveWallets(userPreset);
 
   // 1. Wallet Address Question
   if (isWalletField(combinedText)) {
-    if (wallets.length > 0) {
-      const idx = currentWalletIndex % wallets.length;
+    if (activeWallets.length > 0) {
+      const idx = currentWalletIndex % activeWallets.length;
       return {
-        value: wallets[idx].trim(),
+        value: activeWallets[idx],
         isPreset: true,
-        source: `Unique Wallet Address #${idx + 1}`
+        source: `Active Wallet #${idx + 1}`
       };
     }
   }
 
-  // 2. All other questions -> Deterministic Unique Identity per runIndex
-  const identity = providedIdentity || generateDeterministicIdentity(currentWalletIndex);
+  // 2. All other questions -> Identity per runIndex
+  const identity = providedIdentity || generateDeterministicIdentity(currentWalletIndex, userPreset);
   let generatedVal = '';
 
   // X / Twitter Post URL / Retweet Link / Proof of Tweet
@@ -185,7 +208,7 @@ export function generateFieldValue(field, userPreset, currentWalletIndex = 0, pr
   }
   // Long Paragraph Text
   else if (field.type === 'paragraph') {
-    generatedVal = `Excited to participate in this project with wallet #${currentWalletIndex + 1}. Looking forward to further updates and milestones!`;
+    generatedVal = `Excited to participate in this project. Looking forward to further updates and milestones!`;
   }
   // Default Fallback
   else {
@@ -195,6 +218,6 @@ export function generateFieldValue(field, userPreset, currentWalletIndex = 0, pr
   return { 
     value: generatedVal, 
     isPreset: false, 
-    source: '100% Unique Auto-Gen' 
+    source: 'Smart Identity Match' 
   };
 }

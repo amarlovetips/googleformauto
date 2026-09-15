@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Send, Rocket, CheckCircle2, AlertTriangle, Loader2, Repeat, Clock, Wallet, ShieldCheck } from 'lucide-react';
 import { addSubmissionRecord } from '../utils/storage';
-import { generateFieldValue, generateDeterministicIdentity } from '../utils/formUtils';
+import { generateFieldValue, generateDeterministicIdentity, getActiveWallets } from '../utils/formUtils';
 
 export default function Submitter({ parsedForm, userPreset, fieldValues, onSubmissionComplete }) {
-  const wallets = (userPreset && Array.isArray(userPreset.walletAddresses)) ? userPreset.walletAddresses : [];
+  const activeWallets = getActiveWallets(userPreset);
   
   const [useWalletBatch, setUseWalletBatch] = useState(true);
-  const [submitCount, setSubmitCount] = useState(wallets.length || 1);
+  const [submitCount, setSubmitCount] = useState(activeWallets.length || 1);
   const [delayMs, setDelayMs] = useState(1000);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,24 +16,23 @@ export default function Submitter({ parsedForm, userPreset, fieldValues, onSubmi
 
   if (!parsedForm || !parsedForm.submitUrl) return null;
 
-  const totalRuns = useWalletBatch ? (wallets.length || 1) : submitCount;
+  const totalRuns = useWalletBatch ? (activeWallets.length || 1) : submitCount;
 
-  // Build the HTTP POST payload for a specific wallet index with fresh deterministic unique identity
+  // Build the HTTP POST payload for a specific wallet index with identity
   const buildPayloadForRun = (runIndex) => {
     const payload = {};
     if (!parsedForm.fields) return { payload: {}, identity: {} };
 
-    // Guaranteed 100% unique identity per runIndex
-    const uniqueIdentity = generateDeterministicIdentity(runIndex);
+    const identity = generateDeterministicIdentity(runIndex, userPreset);
 
     parsedForm.fields.forEach(field => {
-      const computed = generateFieldValue(field, userPreset, runIndex, uniqueIdentity);
+      const computed = generateFieldValue(field, userPreset, runIndex, identity);
       if (computed && computed.value !== undefined && computed.value !== null) {
         payload[field.entryId] = computed.value;
       }
     });
 
-    return { payload, identity: uniqueIdentity };
+    return { payload, identity };
   };
 
   const submitSingleFormClient = async (submitUrl, payload) => {
@@ -104,8 +103,8 @@ export default function Submitter({ parsedForm, userPreset, fieldValues, onSubmi
     const runsList = [];
 
     for (let i = 0; i < totalRuns; i++) {
-      const activeWallet = wallets[i] || `Run #${i + 1}`;
-      setProgress({ current: i + 1, total: totalRuns, currentWallet: activeWallet });
+      const currentWalletAddr = activeWallets[i] || `Run #${i + 1}`;
+      setProgress({ current: i + 1, total: totalRuns, currentWallet: currentWalletAddr });
 
       const { payload, identity } = buildPayloadForRun(i);
       const res = await submitSingleFormClient(parsedForm.submitUrl, payload);
@@ -120,7 +119,7 @@ export default function Submitter({ parsedForm, userPreset, fieldValues, onSubmi
 
       runsList.push({
         runIndex: i + 1,
-        walletAddress: activeWallet,
+        walletAddress: currentWalletAddr,
         identity,
         payload,
         status: res.success ? 'Success' : 'Failed'
@@ -159,17 +158,17 @@ export default function Submitter({ parsedForm, userPreset, fieldValues, onSubmi
             Guaranteed Unique Multi-Address Auto-Submit Engine
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.2rem' }}>
-            Submits every loaded wallet address exactly once with 100% unique auto-generated Twitter & social details.
+            Submits every active/enabled wallet address with unique paired handles.
           </p>
         </div>
 
         {/* Batch Mode Switch */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(9, 13, 22, 0.6)', padding: '0.6rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-          {wallets.length > 0 ? (
+          {activeWallets.length > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Wallet size={16} style={{ color: 'var(--accent-emerald)' }} />
               <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#6ee7b7' }}>
-                Multi-Wallet Mode ({wallets.length} Unique Addresses)
+                Multi-Wallet Mode ({activeWallets.length} Active Wallets)
               </span>
             </div>
           ) : (
@@ -210,18 +209,18 @@ export default function Submitter({ parsedForm, userPreset, fieldValues, onSubmi
         <button 
           type="button" 
           onClick={handleStartSubmit}
-          disabled={isSubmitting}
+          disabled={isSubmitting || totalRuns === 0}
           className="btn-success"
           style={{ width: '100%', maxWidth: '480px', height: '58px', justifyContent: 'center' }}
         >
           {isSubmitting ? (
             <>
               <Loader2 className="pulse-glow" size={24} style={{ animation: 'spin 1s linear infinite' }} />
-              Submitting Unique Wallet ({progress.current} / {progress.total})...
+              Submitting Active Wallet ({progress.current} / {progress.total})...
             </>
           ) : (
             <>
-              <Send size={20} /> SUBMIT ALL {totalRuns} UNIQUE WALLET ADDRESSES
+              <Send size={20} /> SUBMIT ALL {totalRuns} ACTIVE WALLET ADDRESSES
             </>
           )}
         </button>
@@ -258,10 +257,10 @@ export default function Submitter({ parsedForm, userPreset, fieldValues, onSubmi
             <CheckCircle2 size={24} style={{ color: 'var(--accent-emerald)' }} />
             <div>
               <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#6ee7b7' }}>
-                All {lastResult.successCount} Unique Wallet Submissions Completed!
+                All {lastResult.successCount} Active Wallet Submissions Completed!
               </h4>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Every single wallet address was submitted once with 100% unique handles. Go to **History** tab to inspect or download the log!
+                Full record of all active wallet runs has been saved to your History Log tab!
               </p>
             </div>
           </div>

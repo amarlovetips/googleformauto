@@ -2,11 +2,15 @@
 const PRESET_KEY = 'formpulse_user_preset';
 const HISTORY_KEY = 'formpulse_submission_history';
 
-// Empty default array so no hardcoded private addresses exist in source code / GitHub
-export const DEFAULT_WALLET_ADDRESSES = [];
-
 export const DEFAULT_PRESET = {
-  walletAddresses: DEFAULT_WALLET_ADDRESSES
+  // Wallet objects list: [{ address: "0x...", enabled: true }]
+  walletList: [],
+  // Optional fixed handles (if empty, auto-generates dynamically)
+  fixedTwitter: '',
+  fixedTelegram: '',
+  fixedEmail: '',
+  fixedName: '',
+  fixedDiscord: ''
 };
 
 export function loadUserPreset() {
@@ -14,11 +18,19 @@ export function loadUserPreset() {
     const data = localStorage.getItem(PRESET_KEY);
     if (!data) return DEFAULT_PRESET;
     const parsed = JSON.parse(data);
-    
-    if (parsed && Array.isArray(parsed.walletAddresses)) {
-      return { walletAddresses: parsed.walletAddresses };
+
+    let walletList = [];
+    if (parsed && Array.isArray(parsed.walletList)) {
+      walletList = parsed.walletList;
+    } else if (parsed && Array.isArray(parsed.walletAddresses)) {
+      walletList = parsed.walletAddresses.map(addr => ({ address: addr, enabled: true }));
     }
-    return DEFAULT_PRESET;
+
+    return {
+      ...DEFAULT_PRESET,
+      ...parsed,
+      walletList
+    };
   } catch (e) {
     console.error('Failed to load user preset', e);
     return DEFAULT_PRESET;
